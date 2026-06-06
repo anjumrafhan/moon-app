@@ -1,0 +1,14 @@
+{
+  "name": "my-chat-app-db",
+  "version": "2.0.0",
+  "description": "WhatsApp jaisa chat app — ab database ke saath",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "mongoose": "^8.4.0"
+  }
+}
