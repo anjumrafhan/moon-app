@@ -1,6 +1,6 @@
 // ====================================================
-//  server.js  —  Chat app ka backend + DATABASE
-//  Node.js + Express + Socket.IO + MongoDB (mongoose)
+//  server.js  —  PRIVATE 1-to-1 chat (WhatsApp jaisa DM)
+//  Node.js + Express + Socket.IO + MongoDB
 // ====================================================
 
 const express = require("express");
@@ -15,76 +15,96 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-// ====================================================
-//  STEP A: DATABASE SE CONNECT
-//  Niche apni connection string lagayein.
-//  - Atlas (cloud) wali:  mongodb+srv://....../chatapp
-//  - Local wali:          mongodb://127.0.0.1:27017/chatapp
-// ====================================================
+// ---- Database se connect ----
 const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/chatapp";
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("MongoDB connect ho gaya"))
   .catch((err) => console.log("MongoDB connect nahi hua:", err.message));
 
-// ====================================================
-//  STEP B: MESSAGE KA STRUCTURE (Schema + Model)
-//  Schema = batata hai ek message kaisa dikhega.
-//  Model  = isi ke zariye hum save/find karte hain.
-// ====================================================
-const messageSchema = new mongoose.Schema({
-  user: String,
-  text: String,
-  time: { type: Date, default: Date.now }, // khud time laga dega
+// ---- User ka structure (sirf naam, password nahi) ----
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true },
 });
+const User = mongoose.model("User", userSchema);
 
+// ---- Message ka structure: ab "from" aur "to" hai ----
+const messageSchema = new mongoose.Schema({
+  from: String, // kis ne bheja
+  to: String,   // kis ko bheja
+  text: String,
+  time: { type: Date, default: Date.now },
+});
 const Message = mongoose.model("Message", messageSchema);
 
-// ====================================================
-//  STEP C: SOCKET.IO — real-time logic
-// ====================================================
-io.on("connection", async (socket) => {
-  console.log("Naya user connect hua:", socket.id);
+// Online users ko yaad rakhne ke liye: username -> socket.id
+const onlineUsers = {};
 
-  // --- Jab user aaye, purane 50 messages database se nikal kar bhejo ---
-  try {
-    const oldMessages = await Message.find().sort({ time: 1 }).limit(50);
-    socket.emit("load messages", oldMessages);
-  } catch (err) {
-    console.log("Purane messages load nahi hue:", err.message);
-  }
+// Sab logon ko taaza contacts list bhejo (online flag ke saath)
+async function sendUserList() {
+  const all = await User.find().sort({ username: 1 });
+  const list = all.map((u) => ({
+    username: u.username,
+    online: Boolean(onlineUsers[u.username]),
+  }));
+  io.emit("user list", list);
+}
 
-  // --- Jab naya message aaye ---
-  socket.on("chat message", async (data) => {
-    try {
-      // 1) Message ko DATABASE mein save karo
-      const saved = await new Message({
-        user: data.user,
-        text: data.text,
-      }).save();
+io.on("connection", (socket) => {
+  console.log("Naya connection:", socket.id);
 
-      // 2) Phir sabhi connected users ko bhej do
-      io.emit("chat message", {
-        user: saved.user,
-        text: saved.text,
-        time: saved.time,
-      });
-    } catch (err) {
-      console.log("Message save nahi hua:", err.message);
+  // --- 1) Register: user apna naam batata hai ---
+  socket.on("register", async (username) => {
+    socket.username = username;
+    onlineUsers[username] = socket.id;
+    // User ko database mein add karo (agar pehle se nahi hai)
+    await User.updateOne({ username }, { username }, { upsert: true });
+    await sendUserList();
+  });
+
+  // --- 2) Do logon ke darmiyan purani baat-cheet load karo ---
+  socket.on("load conversation", async (otherUser) => {
+    const me = socket.username;
+    const msgs = await Message.find({
+      $or: [
+        { from: me, to: otherUser },
+        { from: otherUser, to: me },
+      ],
+    }).sort({ time: 1 });
+    socket.emit("conversation", { withUser: otherUser, messages: msgs });
+  });
+
+  // --- 3) Private message bhejna (sirf us ek bande ko) ---
+  socket.on("private message", async (data) => {
+    // data = { to, text }
+    const from = socket.username;
+    const saved = await new Message({
+      from,
+      to: data.to,
+      text: data.text,
+    }).save();
+
+    const payload = { from, to: data.to, text: saved.text, time: saved.time };
+
+    // Recipient ko bhejo (agar online hai)
+    const toSocketId = onlineUsers[data.to];
+    if (toSocketId) io.to(toSocketId).emit("private message", payload);
+
+    // Khud ko bhi bhejo, taake apni screen par foran dikhe
+    socket.emit("private message", payload);
+  });
+
+  // --- 4) Disconnect: online list se hatao ---
+  socket.on("disconnect", async () => {
+    if (socket.username) {
+      delete onlineUsers[socket.username];
+      await sendUserList();
     }
-  });
-
-  // --- "typing..." ---
-  socket.on("typing", (username) => {
-    socket.broadcast.emit("typing", username);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User chala gaya:", socket.id);
   });
 });
 
-const PORT = 3000;
+// Render khud PORT deta hai; local par 3000
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server chal raha hai: http://localhost:${PORT}`);
 });
