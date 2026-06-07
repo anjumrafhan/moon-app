@@ -1,0 +1,14 @@
+{
+  "name": "My Chat App",
+  "short_name": "Chat App",
+  "description": "Real-time chat app banaya Node.js, Socket.IO aur MongoDB se",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efeae2",
+  "theme_color": "#075e54",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
