@@ -17,7 +17,8 @@ const mongoose = require("mongoose");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+// maxHttpBufferSize barhaya taake image/file (base64) bhej sakein (~6MB)
+const io = new Server(server, { maxHttpBufferSize: 6e6 });
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -42,7 +43,10 @@ const User = mongoose.model("User", userSchema);
 const messageSchema = new mongoose.Schema({
   from: String,
   to: String,
+  type: { type: String, default: "text" }, // "text" | "image" | "file"
   text: String,
+  media: String,                            // base64 data URL (image/file)
+  fileName: String,                         // file ka asli naam
   time: { type: Date, default: Date.now },
 });
 const Message = mongoose.model("Message", messageSchema);
@@ -203,8 +207,29 @@ io.on("connection", (socket) => {
     const sender = await User.findOne({ username: from });
     if (!sender || !(sender.contacts || []).includes(data.to)) return;
 
-    const saved = await new Message({ from, to: data.to, text: data.text }).save();
-    const payload = { from, to: data.to, text: saved.text, time: saved.time };
+    const type = data.type || "text";
+    const media = data.media || "";
+    // size guard: media ~6MB se chhoti honi chahiye
+    if (media && media.length > 8_000_000) return;
+    // khali message (na text, na media) reject
+    if (type === "text" && !(data.text || "").trim()) return;
+    if (type !== "text" && !media) return;
+
+    const saved = await new Message({
+      from,
+      to: data.to,
+      type,
+      text: data.text || "",
+      media,
+      fileName: data.fileName || "",
+    }).save();
+
+    const payload = {
+      from, to: data.to,
+      type: saved.type, text: saved.text,
+      media: saved.media, fileName: saved.fileName,
+      time: saved.time,
+    };
     const toSocketId = onlineUsers[data.to];
     if (toSocketId) io.to(toSocketId).emit("private message", payload);
     socket.emit("private message", payload);
