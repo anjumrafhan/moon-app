@@ -24,24 +24,129 @@
       align-items: center;
     }
 
-    .chat-container {
-      width: 400px;
-      height: 90vh;
-      max-height: 700px;
+    .app {
+      width: min(900px, 96vw);
+      height: 92vh;
+      max-height: 760px;
       background: #efeae2;
       display: flex;
-      flex-direction: column;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
       border-radius: 8px;
       overflow: hidden;
     }
 
+    /* ---------- SIDEBAR (contacts) ---------- */
+    .sidebar {
+      width: 300px;
+      background: #fff;
+      border-right: 1px solid #e2e2e2;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      background: #075e54;
+      color: #fff;
+      padding: 16px 15px;
+      font-size: 17px;
+      font-weight: bold;
+    }
+    .sidebar-header small {
+      display: block;
+      font-weight: normal;
+      font-size: 12px;
+      opacity: .85;
+      margin-top: 2px;
+    }
+
+    .contacts {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .contact {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f1f1;
+    }
+    .contact:hover { background: #f5f5f5; }
+    .contact.active { background: #ebebeb; }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #075e54;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .c-meta { flex: 1; min-width: 0; }
+    .c-name { font-weight: bold; font-size: 15px; color: #111; }
+    .c-status { font-size: 12px; color: #888; }
+    .c-status.online { color: #25d366; }
+
+    .badge {
+      background: #25d366;
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-contacts {
+      padding: 20px 16px;
+      color: #888;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ---------- CHAT AREA ---------- */
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
     .chat-header {
       background: #075e54;
       color: white;
-      padding: 15px;
-      font-size: 18px;
+      padding: 12px 15px;
+      font-size: 17px;
       font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chat-header .back {
+      display: none;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .chat-header small {
+      display: block;
+      font-weight: normal;
+      font-size: 12px;
+      opacity: .85;
     }
 
     .messages {
@@ -51,31 +156,22 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      background: #efeae2;
     }
 
     .message {
-      max-width: 75%;
+      max-width: 70%;
       padding: 8px 12px;
       border-radius: 8px;
       background: white;
       align-self: flex-start;
       word-wrap: break-word;
+      box-shadow: 0 1px 1px rgba(0,0,0,.08);
     }
-
     .message.mine {
       align-self: flex-end;
       background: #dcf8c6;
     }
-
-    .message .sender {
-      font-size: 12px;
-      color: #075e54;
-      font-weight: bold;
-      display: block;
-      margin-bottom: 2px;
-    }
-
-    /* message ke neeche chhota time */
     .message .time {
       font-size: 10px;
       color: #999;
@@ -84,11 +180,15 @@
       margin-top: 3px;
     }
 
-    .typing {
-      font-size: 12px;
+    .placeholder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #888;
-      padding: 0 15px 5px;
-      height: 18px;
+      text-align: center;
+      padding: 20px;
+      background: #efeae2;
     }
 
     .input-area {
@@ -97,7 +197,6 @@
       background: #f0f0f0;
       gap: 8px;
     }
-
     .input-area input {
       flex: 1;
       padding: 10px;
@@ -105,7 +204,7 @@
       border-radius: 20px;
       outline: none;
     }
-
+    .input-area input:disabled { background: #e9e9e9; }
     .input-area button {
       background: #075e54;
       color: white;
@@ -114,32 +213,90 @@
       border-radius: 20px;
       cursor: pointer;
     }
+    .input-area button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 600px) {
+      body { align-items: stretch; justify-content: stretch; }
+      .app { width: 100%; height: 100vh; max-height: none; border-radius: 0; }
+      .sidebar { width: 100%; }
+      .chat { display: none; }
+      /* jab chat khuli ho: sidebar chhupao, chat dikhao */
+      .app.show-chat .sidebar { display: none; }
+      .app.show-chat .chat { display: flex; }
+      .chat-header .back { display: inline; }
+    }
   </style>
 </head>
 <body>
 
-  <div class="chat-container">
-    <div class="chat-header">My Chat App</div>
-    <div class="messages" id="messages"></div>
-    <div class="typing" id="typing"></div>
-    <div class="input-area">
-      <input id="input" type="text" placeholder="Message likhein..." autocomplete="off" />
-      <button id="send">Send</button>
+  <div class="app" id="app">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        Chats
+        <small id="myName">—</small>
+      </div>
+      <div class="contacts" id="contacts"></div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat">
+      <div class="chat-header">
+        <button class="back" id="back" title="Wapas">&larr;</button>
+        <div>
+          <span id="chatName">My Chat App</span>
+          <small id="chatStatus"></small>
+        </div>
+      </div>
+
+      <!-- jab tak koi contact select na ho -->
+      <div class="placeholder" id="placeholder">
+        Baat shuru karne ke liye baayein se kisi contact ko chunein.
+      </div>
+
+      <!-- messages (chat khulne par dikhega) -->
+      <div class="messages" id="messages" style="display:none;"></div>
+
+      <div class="input-area">
+        <input id="input" type="text" placeholder="Message likhein..." autocomplete="off" disabled />
+        <button id="send" disabled>Send</button>
+      </div>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-
   <script>
     const socket = io();
-    const username = prompt("Apna naam likhein:") || "Anonymous";
 
-    const messages = document.getElementById("messages");
-    const input = document.getElementById("input");
-    const sendBtn = document.getElementById("send");
-    const typingDiv = document.getElementById("typing");
+    // ---- Apna naam ----
+    let me = (prompt("Apna naam likhein:") || "Anonymous").trim() || "Anonymous";
+    document.getElementById("myName").textContent = me;
+    socket.emit("register", me);
 
-    // Time ko aasan shakal mein dikhane wala helper
+    // ---- State ----
+    let currentChat = null;     // jis se abhi baat ho rahi hai
+    let lastList = [];          // server se aayi taaza user list
+    const unread = {};          // username -> kitne unread messages
+    const userInfo = {};        // username -> { online }
+
+    // ---- DOM ----
+    const app          = document.getElementById("app");
+    const contactsEl   = document.getElementById("contacts");
+    const messagesEl   = document.getElementById("messages");
+    const placeholder  = document.getElementById("placeholder");
+    const inputEl      = document.getElementById("input");
+    const sendBtn      = document.getElementById("send");
+    const chatName     = document.getElementById("chatName");
+    const chatStatus   = document.getElementById("chatStatus");
+    const backBtn      = document.getElementById("back");
+
+    // ---- Helpers ----
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c =>
+        ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+    }
+
     function formatTime(t) {
       if (!t) return "";
       const d = new Date(t);
@@ -147,55 +304,123 @@
              d.getMinutes().toString().padStart(2, "0");
     }
 
-    // Ek message ko screen par dikhane wala function
-    function addMessage(data) {
-      const div = document.createElement("div");
-      div.classList.add("message");
+    function scrollBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
 
-      const timeText = `<span class="time">${formatTime(data.time)}</span>`;
+    // ---- Contacts list dikhao ----
+    function renderContacts() {
+      contactsEl.innerHTML = "";
+      const others = lastList.filter(u => u.username !== me);
 
-      if (data.user === username) {
-        div.classList.add("mine");
-        div.innerHTML = data.text + timeText;
-      } else {
-        div.innerHTML = `<span class="sender">${data.user}</span>${data.text}${timeText}`;
+      if (others.length === 0) {
+        contactsEl.innerHTML =
+          '<div class="empty-contacts">Abhi koi doosra user nahi mila.<br><br>' +
+          'Doosri window / phone par yahi app khol kar koi aur naam register karein, ' +
+          'phir wo yahan nazar aaye ga.</div>';
+        return;
       }
 
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
+      others.forEach(u => {
+        userInfo[u.username] = u;
+        const item = document.createElement("div");
+        item.className = "contact" + (u.username === currentChat ? " active" : "");
+        item.onclick = () => openChat(u.username);
+
+        const count = unread[u.username] || 0;
+        const badge = count ? `<span class="badge">${count}</span>` : "";
+
+        item.innerHTML =
+          `<div class="avatar">${escapeHtml(u.username.charAt(0).toUpperCase())}</div>
+           <div class="c-meta">
+             <div class="c-name">${escapeHtml(u.username)}</div>
+             <div class="c-status ${u.online ? "online" : ""}">${u.online ? "online" : "offline"}</div>
+           </div>
+           ${badge}`;
+        contactsEl.appendChild(item);
+      });
+    }
+
+    // ---- Kisi contact ke saath chat kholo ----
+    function openChat(user) {
+      currentChat = user;
+      unread[user] = 0;
+
+      chatName.textContent = user;
+      chatStatus.textContent = (userInfo[user] && userInfo[user].online) ? "online" : "offline";
+
+      messagesEl.innerHTML = "";
+      messagesEl.style.display = "flex";
+      placeholder.style.display = "none";
+
+      inputEl.disabled = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+
+      app.classList.add("show-chat");   // mobile par chat dikhao
+      renderContacts();                 // active highlight + badge clear
+
+      socket.emit("load conversation", user);
+    }
+
+    // ---- Ek message screen par lagao ----
+    function addMessage(data) {
+      const div = document.createElement("div");
+      div.className = "message" + (data.from === me ? " mine" : "");
+      div.innerHTML = escapeHtml(data.text) +
+                      `<span class="time">${formatTime(data.time)}</span>`;
+      messagesEl.appendChild(div);
     }
 
     // ---- Message bhejna ----
     function sendMessage() {
-      const text = input.value.trim();
-      if (text === "") return;
-      socket.emit("chat message", { user: username, text: text });
-      input.value = "";
+      const text = inputEl.value.trim();
+      if (text === "" || !currentChat) return;
+      socket.emit("private message", { to: currentChat, text: text });
+      inputEl.value = "";
+      // Note: server khud wapas bhejta hai, isliye yahan add nahi karte.
     }
 
     sendBtn.addEventListener("click", sendMessage);
-    input.addEventListener("keypress", (e) => {
+    inputEl.addEventListener("keypress", (e) => {
       if (e.key === "Enter") sendMessage();
-      else socket.emit("typing", username);
+    });
+    backBtn.addEventListener("click", () => app.classList.remove("show-chat"));
+
+    // ================== SERVER SE AANE WALE EVENTS ==================
+
+    // 1) Contacts list (online flag ke saath)
+    socket.on("user list", (list) => {
+      lastList = list;
+      // agar khuli chat wale ka status badla ho to update karo
+      if (currentChat) {
+        const u = list.find(x => x.username === currentChat);
+        chatStatus.textContent = (u && u.online) ? "online" : "offline";
+      }
+      renderContacts();
     });
 
-    // ---- PURANE MESSAGES (database se) jab app khule ----
-    socket.on("load messages", (oldMessages) => {
-      oldMessages.forEach(addMessage);
+    // 2) Purani baat-cheet (jab contact kholte ho)
+    socket.on("conversation", (payload) => {
+      if (payload.withUser !== currentChat) return;   // sirf khuli chat ke liye
+      messagesEl.innerHTML = "";
+      payload.messages.forEach(addMessage);
+      scrollBottom();
     });
 
-    // ---- Naya message aana ----
-    socket.on("chat message", (data) => {
-      typingDiv.textContent = "";
-      addMessage(data);
-    });
+    // 3) Naya private message (apna ya doosre ka)
+    socket.on("private message", (data) => {
+      // is message ka "doosra banda" kaun hai?
+      const other = (data.from === me) ? data.to : data.from;
 
-    // ---- typing... ----
-    let typingTimeout;
-    socket.on("typing", (name) => {
-      typingDiv.textContent = name + " type kar raha hai...";
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => { typingDiv.textContent = ""; }, 1500);
+      if (other === currentChat) {
+        addMessage(data);
+        scrollBottom();
+      } else {
+        // doosri chat ka message -> unread badge barhao
+        unread[other] = (unread[other] || 0) + 1;
+        renderContacts();
+      }
     });
   </script>
 </body>
