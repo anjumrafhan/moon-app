@@ -319,6 +319,42 @@
       setTimeout(() => toastEl.classList.remove("show"), 2000);
     }
 
+    // ---- Notifications + sound ----
+    let audioCtx;
+    function playBeep() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        o.type = "sine"; o.frequency.value = 620;
+        g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        o.start(); o.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+    }
+    function notifyMessage(data) {
+      if (data.from === me) return;                 // apna message nahi
+      const focused = (document.visibilityState === "visible") && document.hasFocus();
+      const inThisChat = data.from === currentChat;
+      if (focused && inThisChat) return;            // pehle se dekh rahe ho
+
+      playBeep();
+      document.title = "🔴 Naya message — My Chat App";
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        let body = data.type === "image" ? "📷 Photo"
+                 : data.type === "file"  ? ("📎 " + (data.fileName || "File"))
+                 : (data.text || "");
+        try {
+          const n = new Notification(data.from, { body: body, icon: "/icon-192.png", tag: data.from });
+          n.onclick = () => { window.focus(); openChat(data.from); n.close(); };
+        } catch (e) {}
+      }
+    }
+    window.addEventListener("focus", () => { document.title = "My Chat App"; });
+
     // ================== AUTH ==================
     // auto-login (saved token)
     const savedUser  = localStorage.getItem("chat_username");
@@ -359,6 +395,11 @@
       authEl.style.display = "none";
       appEl.style.display = "flex";
       authPass.value = "";
+
+      // notification ki ijazat maango (taake naye message ki khabar mile)
+      if ("Notification" in window && Notification.permission === "default") {
+        try { Notification.requestPermission(); } catch (e) {}
+      }
 
       if (inviteParam) {
         socket.emit("use invite", inviteParam);
@@ -548,6 +589,7 @@
       const other = (data.from === me) ? data.to : data.from;
       if (other === currentChat) { typingDiv.textContent = ""; addMessage(data); scrollBottom(); }
       else { unread[other] = (unread[other] || 0) + 1; renderContacts(); }
+      notifyMessage(data);
     });
 
     let typingTimeout;
