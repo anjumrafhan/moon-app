@@ -58,6 +58,17 @@
       opacity: .85;
       margin-top: 2px;
     }
+    .sidebar-header .change-name {
+      margin-top: 6px;
+      background: rgba(255,255,255,.18);
+      color: #fff;
+      border: none;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .sidebar-header .change-name:hover { background: rgba(255,255,255,.3); }
 
     .contacts {
       flex: 1;
@@ -245,6 +256,7 @@
       <div class="sidebar-header">
         Chats
         <small id="myName">—</small>
+        <button id="changeName" class="change-name">Naam badlein</button>
       </div>
       <div class="contacts" id="contacts"></div>
     </div>
@@ -281,8 +293,12 @@
   <script>
     const socket = io();
 
-    // ---- Apna naam ----
-    let me = (prompt("Apna naam likhein:") || "Anonymous").trim() || "Anonymous";
+    // ---- Apna naam (browser memory mein yaad rakho) ----
+    let me = localStorage.getItem("chat_username");
+    if (!me) {
+      me = (prompt("Apna naam likhein:") || "Anonymous").trim() || "Anonymous";
+      localStorage.setItem("chat_username", me);   // ab agli dafa nahi poochega
+    }
     document.getElementById("myName").textContent = me;
     socket.emit("register", me);
 
@@ -415,6 +431,15 @@
     });
 
     backBtn.addEventListener("click", () => app.classList.remove("show-chat"));
+
+    // Naam badalna: naya naam save karke app dobara load karo
+    document.getElementById("changeName").addEventListener("click", () => {
+      const newName = (prompt("Naya naam likhein:", me) || "").trim();
+      if (newName) {
+        localStorage.setItem("chat_username", newName);
+        location.reload();
+      }
+    });
 
     // ================== SERVER SE AANE WALE EVENTS ==================
 
