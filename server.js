@@ -1,11 +1,16 @@
 // ====================================================
-//  server.js  —  PRIVATE 1-to-1 chat (WhatsApp jaisa DM)
+//  server.js  —  PRIVATE chat with INVITE-LINK contacts
 //  Node.js + Express + Socket.IO + MongoDB
+//
+//  Ab har koi sab ko nahi dekhta. Sirf un logon se baat
+//  ho sakti hai jinke saath aap invite-link ke zariye
+//  "juday" hain (mutual contact).
 // ====================================================
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 
 const app = express();
@@ -21,32 +26,50 @@ mongoose
   .then(() => console.log("MongoDB connect ho gaya"))
   .catch((err) => console.log("MongoDB connect nahi hua:", err.message));
 
-// ---- User ka structure (sirf naam, password nahi) ----
+// ---- User: ab inviteCode aur contacts bhi rakhte hain ----
 const userSchema = new mongoose.Schema({
   username: { type: String, unique: true },
+  inviteCode: { type: String, unique: true, sparse: true }, // personal invite link ka code
+  contacts: { type: [String], default: [] },                 // sirf inse baat ho sakti hai
 });
 const User = mongoose.model("User", userSchema);
 
-// ---- Message ka structure: ab "from" aur "to" hai ----
+// ---- Message ka structure ----
 const messageSchema = new mongoose.Schema({
-  from: String, // kis ne bheja
-  to: String,   // kis ko bheja
+  from: String,
+  to: String,
   text: String,
   time: { type: Date, default: Date.now },
 });
 const Message = mongoose.model("Message", messageSchema);
 
-// Online users ko yaad rakhne ke liye: username -> socket.id
+// Online users: username -> socket.id
 const onlineUsers = {};
 
-// Sab logon ko taaza contacts list bhejo (online flag ke saath)
-async function sendUserList() {
-  const all = await User.find().sort({ username: 1 });
-  const list = all.map((u) => ({
-    username: u.username,
-    online: Boolean(onlineUsers[u.username]),
-  }));
-  io.emit("user list", list);
+// Chhota random invite code banao
+function makeCode() {
+  return crypto.randomBytes(5).toString("hex"); // 10 characters
+}
+
+// Kisi ek user ki contact list (sirf uske apne contacts) us tak bhejo
+async function pushContacts(username) {
+  const sid = onlineUsers[username];
+  if (!sid) return; // offline hai to kuch nahi
+  const user = await User.findOne({ username });
+  if (!user) return;
+  const list = (user.contacts || [])
+    .map((c) => ({ username: c, online: Boolean(onlineUsers[c]) }))
+    .sort((a, b) => a.username.localeCompare(b.username));
+  io.to(sid).emit("user list", list);
+}
+
+// User + uske sab contacts ki list refresh karo (online/offline status ke liye)
+async function refreshAround(username) {
+  const user = await User.findOne({ username });
+  await pushContacts(username);
+  if (user) {
+    for (const c of user.contacts || []) await pushContacts(c);
+  }
 }
 
 io.on("connection", (socket) => {
@@ -54,15 +77,42 @@ io.on("connection", (socket) => {
 
   // --- 1) Register: user apna naam batata hai ---
   socket.on("register", async (username) => {
-    socket.username = username;
+    socket.username = username;          // (synchronously set — zaroori hai)
     onlineUsers[username] = socket.id;
 
-    // User ko database mein add karo (agar pehle se nahi hai)
-    await User.updateOne({ username }, { username }, { upsert: true });
-    await sendUserList();
+    let user = await User.findOne({ username });
+    if (!user) {
+      user = await User.create({ username, inviteCode: makeCode(), contacts: [] });
+    } else if (!user.inviteCode) {
+      user.inviteCode = makeCode();      // purane user ko bhi code de do
+      await user.save();
+    }
+
+    // Apna invite code wapas bhejo (frontend ise share-link banayega)
+    socket.emit("your invite", { inviteCode: user.inviteCode });
+
+    await refreshAround(username);
   });
 
-  // --- 2) Do logon ke darmiyan purani baat-cheet load karo ---
+  // --- 2) Invite link se judna ---
+  socket.on("use invite", async (code) => {
+    const me = socket.username;
+    if (!me || !code) return;
+
+    const owner = await User.findOne({ inviteCode: code });
+    if (!owner || owner.username === me) return; // ghalat code ya apna hi link
+
+    // Dono taraf mutual contact add karo (duplicate na ho)
+    await User.updateOne({ username: owner.username }, { $addToSet: { contacts: me } });
+    await User.updateOne({ username: me }, { $addToSet: { contacts: owner.username } });
+
+    await pushContacts(me);
+    await pushContacts(owner.username);
+
+    socket.emit("invite done", { withUser: owner.username });
+  });
+
+  // --- 3) Do logon ke darmiyan purani baat-cheet load karo ---
   socket.on("load conversation", async (otherUser) => {
     const me = socket.username;
     const msgs = await Message.find({
@@ -74,10 +124,15 @@ io.on("connection", (socket) => {
     socket.emit("conversation", { withUser: otherUser, messages: msgs });
   });
 
-  // --- 3) Private message bhejna (sirf us ek bande ko) ---
+  // --- 4) Private message bhejna (sirf contact ko) ---
   socket.on("private message", async (data) => {
-    // data = { to, text }
     const from = socket.username;
+    if (!from) return;
+
+    // Privacy: sirf apne contact ko message bhej sakte ho
+    const sender = await User.findOne({ username: from });
+    if (!sender || !(sender.contacts || []).includes(data.to)) return;
+
     const saved = await new Message({
       from,
       to: data.to,
@@ -86,28 +141,25 @@ io.on("connection", (socket) => {
 
     const payload = { from, to: data.to, text: saved.text, time: saved.time };
 
-    // Recipient ko bhejo (agar online hai)
     const toSocketId = onlineUsers[data.to];
     if (toSocketId) io.to(toSocketId).emit("private message", payload);
-
-    // Khud ko bhi bhejo, taake apni screen par foran dikhe
-    socket.emit("private message", payload);
+    socket.emit("private message", payload); // khud ko bhi, taake foran dikhe
   });
 
-  // --- 3.5) Typing indicator (sirf us bande ko jise message ja raha hai) ---
+  // --- 5) Typing indicator (sirf us bande ko jise message ja raha hai) ---
   socket.on("typing", (data) => {
-    // data = { to }
     const from = socket.username;
     if (!from) return;
     const toSocketId = onlineUsers[data.to];
     if (toSocketId) io.to(toSocketId).emit("typing", { from });
   });
 
-  // --- 4) Disconnect: online list se hatao ---
+  // --- 6) Disconnect: online list se hatao + contacts ko batao ---
   socket.on("disconnect", async () => {
     if (socket.username) {
-      delete onlineUsers[socket.username];
-      await sendUserList();
+      const name = socket.username;
+      delete onlineUsers[name];
+      await refreshAround(name);
     }
   });
 });
