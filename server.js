@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema({
   tokens: { type: [String], default: [] },                   // login sessions
   inviteCode: { type: String, unique: true, sparse: true },  // personal invite link
   contacts: { type: [String], default: [] },                 // sirf inse baat ho sakti hai
+  avatar: { type: String, default: "" },                     // profile pic (base64, chhoti)
 });
 const User = mongoose.model("User", userSchema);
 
@@ -79,8 +80,12 @@ async function pushContacts(username) {
   if (!sid) return;
   const user = await User.findOne({ username });
   if (!user) return;
+  // contacts ki profile pics bhi nikaal lo
+  const docs = await User.find({ username: { $in: user.contacts || [] } }, "username avatar");
+  const avatarOf = {};
+  docs.forEach((d) => { avatarOf[d.username] = d.avatar || ""; });
   const list = (user.contacts || [])
-    .map((c) => ({ username: c, online: Boolean(onlineUsers[c]) }))
+    .map((c) => ({ username: c, online: Boolean(onlineUsers[c]), avatar: avatarOf[c] || "" }))
     .sort((a, b) => a.username.localeCompare(b.username));
   io.to(sid).emit("user list", list);
 }
@@ -98,6 +103,7 @@ async function finishLogin(socket, user, token) {
   onlineUsers[user.username] = socket.id;
   socket.emit("auth ok", { username: user.username, token });
   socket.emit("your invite", { inviteCode: user.inviteCode });
+  socket.emit("your profile", { avatar: user.avatar || "" });
   await refreshAround(user.username);
 }
 
@@ -172,6 +178,36 @@ io.on("connection", (socket) => {
   socket.on("logout", async (token) => {
     if (socket.username)
       await User.updateOne({ username: socket.username }, { $pull: { tokens: token } });
+  });
+
+  // ---- PASSWORD BADLO ----
+  socket.on("change password", async ({ oldPassword, newPassword }) => {
+    try {
+      const me = socket.username;
+      if (!me) return socket.emit("password result", { ok: false, msg: "Pehle login karein." });
+      if (!newPassword || newPassword.length < 4)
+        return socket.emit("password result", { ok: false, msg: "Naya password kam se kam 4 characters ka ho." });
+
+      const user = await User.findOne({ username: me });
+      if (!user || !verifyPassword(oldPassword, user.passwordHash))
+        return socket.emit("password result", { ok: false, msg: "Mojooda password ghalat hai." });
+
+      user.passwordHash = hashPassword(newPassword);
+      await user.save();
+      socket.emit("password result", { ok: true, msg: "Password badal gaya." });
+    } catch (e) {
+      socket.emit("password result", { ok: false, msg: "Kuch masla hua." });
+    }
+  });
+
+  // ---- PROFILE PIC set karo ----
+  socket.on("set avatar", async (media) => {
+    const me = socket.username;
+    if (!me) return;
+    if (media && media.length > 400000) return; // avatar chhota hona chahiye (~300KB)
+    await User.updateOne({ username: me }, { avatar: media || "" });
+    socket.emit("your profile", { avatar: media || "" });
+    await refreshAround(me); // contacts ko bhi nayi pic dikhe
   });
 
   // ---- Invite link se judna (login ke baad) ----
