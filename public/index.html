@@ -24,6 +24,39 @@
       align-items: center;
     }
 
+    /* ---------- LOGIN SCREEN ---------- */
+    .auth {
+      position: fixed; inset: 0;
+      background: #d9dbd4;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px;
+    }
+    .auth-card {
+      width: 100%; max-width: 340px;
+      background: #fff; border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .auth-logo {
+      text-align: center; font-size: 22px; font-weight: bold;
+      color: #075e54; margin-bottom: 6px;
+    }
+    .auth-card input {
+      padding: 12px; border: 1px solid #ccc; border-radius: 8px;
+      font-size: 15px; outline: none;
+    }
+    .auth-card input:focus { border-color: #075e54; }
+    .auth-card button {
+      padding: 12px; border: none; border-radius: 8px;
+      font-size: 15px; cursor: pointer; font-weight: bold;
+    }
+    .auth-card .primary { background: #075e54; color: #fff; }
+    .auth-card .secondary { background: #e8f0ef; color: #075e54; }
+    .auth-error { color: #c0392b; font-size: 13px; min-height: 16px; text-align: center; }
+    .auth-hint { color: #888; font-size: 12px; text-align: center; line-height: 1.5; }
+
+    /* ---------- APP ---------- */
     .app {
       width: min(900px, 96vw);
       height: 92vh;
@@ -35,190 +68,110 @@
       overflow: hidden;
     }
 
-    /* ---------- SIDEBAR (contacts) ---------- */
+    /* SIDEBAR */
     .sidebar {
-      width: 300px;
-      background: #fff;
-      border-right: 1px solid #e2e2e2;
-      display: flex;
-      flex-direction: column;
+      width: 300px; background: #fff; border-right: 1px solid #e2e2e2;
+      display: flex; flex-direction: column;
     }
-
-    .sidebar-header {
-      background: #075e54;
-      color: #fff;
-      padding: 14px 15px;
-    }
-    .sh-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .sidebar-header { background: #075e54; color: #fff; padding: 14px 15px; }
+    .sh-top { display: flex; align-items: center; justify-content: space-between; }
     .sh-top span { font-size: 17px; font-weight: bold; }
     .sidebar-header small {
-      display: block;
-      font-weight: normal;
-      font-size: 12px;
-      opacity: .85;
-      margin-top: 4px;
+      display: block; font-weight: normal; font-size: 12px; opacity: .85; margin-top: 4px;
     }
     .invite-btn {
-      background: rgba(255,255,255,.2);
-      color: #fff;
-      border: none;
-      font-size: 13px;
-      font-weight: bold;
-      padding: 6px 12px;
-      border-radius: 14px;
-      cursor: pointer;
+      background: rgba(255,255,255,.2); color: #fff; border: none;
+      font-size: 13px; font-weight: bold; padding: 6px 12px;
+      border-radius: 14px; cursor: pointer;
     }
     .invite-btn:hover { background: rgba(255,255,255,.32); }
-    .change-name {
-      margin-top: 6px;
-      background: rgba(255,255,255,.18);
-      color: #fff;
-      border: none;
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 12px;
-      cursor: pointer;
+    .logout-btn {
+      margin-top: 6px; background: rgba(255,255,255,.18); color: #fff; border: none;
+      font-size: 11px; padding: 4px 10px; border-radius: 12px; cursor: pointer;
     }
-    .change-name:hover { background: rgba(255,255,255,.3); }
+    .logout-btn:hover { background: rgba(255,255,255,.3); }
 
-    /* invite link box */
     .invite-box {
-      display: none;
-      gap: 6px;
-      padding: 10px;
-      background: #f6f6f6;
-      border-bottom: 1px solid #e2e2e2;
+      display: none; gap: 6px; padding: 10px;
+      background: #f6f6f6; border-bottom: 1px solid #e2e2e2;
     }
     .invite-box.show { display: flex; }
     .invite-box input {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 12px;
-      outline: none;
+      flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px;
+      font-size: 12px; outline: none;
     }
     .invite-box button {
-      background: #075e54;
-      color: #fff;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
+      background: #075e54; color: #fff; border: none; padding: 8px 12px;
+      border-radius: 6px; cursor: pointer; font-size: 12px;
     }
 
     .contacts { flex: 1; overflow-y: auto; }
-
     .contact {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      cursor: pointer;
-      border-bottom: 1px solid #f1f1f1;
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+      cursor: pointer; border-bottom: 1px solid #f1f1f1;
     }
     .contact:hover { background: #f5f5f5; }
     .contact.active { background: #ebebeb; }
-
     .avatar {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      background: #075e54;
-      color: #fff;
+      width: 42px; height: 42px; border-radius: 50%; background: #075e54; color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-weight: bold; font-size: 18px;
-      flex-shrink: 0;
+      font-weight: bold; font-size: 18px; flex-shrink: 0;
     }
-
     .c-meta { flex: 1; min-width: 0; }
     .c-name { font-weight: bold; font-size: 15px; color: #111; }
     .c-status { font-size: 12px; color: #888; }
     .c-status.online { color: #25d366; }
-
     .badge {
-      background: #25d366; color: #fff;
-      font-size: 12px; font-weight: bold;
-      min-width: 20px; height: 20px; padding: 0 6px;
-      border-radius: 10px;
+      background: #25d366; color: #fff; font-size: 12px; font-weight: bold;
+      min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
     }
+    .empty-contacts { padding: 20px 16px; color: #888; font-size: 13px; line-height: 1.6; }
 
-    .empty-contacts {
-      padding: 20px 16px;
-      color: #888; font-size: 13px; line-height: 1.6;
-    }
-
-    /* ---------- CHAT AREA ---------- */
+    /* CHAT */
     .chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-
     .chat-header {
-      background: #075e54; color: white;
-      padding: 12px 15px; font-size: 17px; font-weight: bold;
-      display: flex; align-items: center; gap: 10px;
+      background: #075e54; color: white; padding: 12px 15px;
+      font-size: 17px; font-weight: bold; display: flex; align-items: center; gap: 10px;
     }
     .chat-header .back {
-      display: none;
-      background: none; border: none; color: #fff;
+      display: none; background: none; border: none; color: #fff;
       font-size: 22px; cursor: pointer; line-height: 1;
     }
-    .chat-header small {
-      display: block; font-weight: normal; font-size: 12px; opacity: .85;
-    }
+    .chat-header small { display: block; font-weight: normal; font-size: 12px; opacity: .85; }
 
     .messages {
       flex: 1; padding: 15px; overflow-y: auto;
-      display: flex; flex-direction: column; gap: 8px;
-      background: #efeae2;
+      display: flex; flex-direction: column; gap: 8px; background: #efeae2;
     }
-
     .message {
-      max-width: 70%; padding: 8px 12px; border-radius: 8px;
-      background: white; align-self: flex-start; word-wrap: break-word;
-      box-shadow: 0 1px 1px rgba(0,0,0,.08);
+      max-width: 70%; padding: 8px 12px; border-radius: 8px; background: white;
+      align-self: flex-start; word-wrap: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.08);
     }
     .message.mine { align-self: flex-end; background: #dcf8c6; }
-    .message .time {
-      font-size: 10px; color: #999; display: block;
-      text-align: right; margin-top: 3px;
-    }
+    .message .time { font-size: 10px; color: #999; display: block; text-align: right; margin-top: 3px; }
 
-    .typing {
-      font-size: 12px; color: #888;
-      padding: 0 15px 5px; height: 18px; background: #efeae2;
-    }
-
+    .typing { font-size: 12px; color: #888; padding: 0 15px 5px; height: 18px; background: #efeae2; }
     .placeholder {
       flex: 1; display: flex; align-items: center; justify-content: center;
       color: #888; text-align: center; padding: 20px; background: #efeae2;
     }
-
     .input-area { display: flex; padding: 10px; background: #f0f0f0; gap: 8px; }
-    .input-area input {
-      flex: 1; padding: 10px; border: 1px solid #ccc;
-      border-radius: 20px; outline: none;
-    }
+    .input-area input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
     .input-area input:disabled { background: #e9e9e9; }
     .input-area button {
-      background: #075e54; color: white; border: none;
-      padding: 10px 18px; border-radius: 20px; cursor: pointer;
+      background: #075e54; color: white; border: none; padding: 10px 18px;
+      border-radius: 20px; cursor: pointer;
     }
     .input-area button:disabled { opacity: .5; cursor: not-allowed; }
 
-    /* toast */
     .toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: #075e54; color: #fff; padding: 10px 18px;
-      border-radius: 20px; font-size: 14px; opacity: 0;
-      transition: opacity .3s; pointer-events: none; z-index: 50;
+      background: #075e54; color: #fff; padding: 10px 18px; border-radius: 20px;
+      font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 110;
     }
     .toast.show { opacity: 1; }
 
-    /* ---------- MOBILE ---------- */
     @media (max-width: 600px) {
       body { align-items: stretch; justify-content: stretch; }
       .app { width: 100%; height: 100vh; max-height: none; border-radius: 0; }
@@ -232,8 +185,21 @@
 </head>
 <body>
 
-  <div class="app" id="app">
-    <!-- SIDEBAR -->
+  <!-- ===== LOGIN / SIGN UP SCREEN ===== -->
+  <div class="auth" id="auth">
+    <div class="auth-card">
+      <div class="auth-logo">My Chat App</div>
+      <input id="authUser" type="text" placeholder="Naam (username)" autocomplete="username" />
+      <input id="authPass" type="password" placeholder="Password" autocomplete="current-password" />
+      <div class="auth-error" id="authError"></div>
+      <button class="primary" id="loginBtn">Login</button>
+      <button class="secondary" id="signupBtn">Sign up (naya account)</button>
+      <div class="auth-hint">Pehli baar ho to "Sign up" karein. Password kisi ko na batayein.</div>
+    </div>
+  </div>
+
+  <!-- ===== APP (login ke baad dikhega) ===== -->
+  <div class="app" id="app" style="display:none;">
     <div class="sidebar">
       <div class="sidebar-header">
         <div class="sh-top">
@@ -241,10 +207,9 @@
           <button id="inviteBtn" class="invite-btn">+ Invite</button>
         </div>
         <small id="myName">—</small>
-        <button id="changeName" class="change-name">Naam badlein</button>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
       </div>
 
-      <!-- invite link box -->
       <div class="invite-box" id="inviteBox">
         <input id="inviteLink" readonly value="..." />
         <button id="copyInvite">Copy</button>
@@ -253,7 +218,6 @@
       <div class="contacts" id="contacts"></div>
     </div>
 
-    <!-- CHAT AREA -->
     <div class="chat">
       <div class="chat-header">
         <button class="back" id="back" title="Wapas">&larr;</button>
@@ -262,14 +226,11 @@
           <small id="chatStatus"></small>
         </div>
       </div>
-
       <div class="placeholder" id="placeholder">
         Baat shuru karne ke liye baayein se kisi contact ko chunein.
       </div>
-
       <div class="messages" id="messages" style="display:none;"></div>
       <div class="typing" id="typing" style="display:none;"></div>
-
       <div class="input-area">
         <input id="input" type="text" placeholder="Message likhein..." autocomplete="off" disabled />
         <button id="send" disabled>Send</button>
@@ -283,27 +244,13 @@
   <script>
     const socket = io();
 
-    // ---- Invite link se aaye? (URL mein ?invite=CODE) ----
+    // invite link se aaye? (?invite=CODE)
     const params = new URLSearchParams(location.search);
     const inviteParam = params.get("invite");
 
-    // ---- Apna naam (browser memory mein yaad rakho) ----
-    let me = localStorage.getItem("chat_username");
-    if (!me) {
-      me = (prompt("Apna naam likhein:") || "Anonymous").trim() || "Anonymous";
-      localStorage.setItem("chat_username", me);
-    }
-    document.getElementById("myName").textContent = me;
-
-    socket.emit("register", me);
-
-    // Agar invite link se aaye hain to register ke foran baad judo
-    if (inviteParam) {
-      socket.emit("use invite", inviteParam);
-      history.replaceState({}, "", location.pathname); // URL saaf karo
-    }
-
     // ---- State ----
+    let me = null;
+    let myToken = null;
     let currentChat = null;
     let lastList = [];
     let myInviteCode = null;
@@ -312,7 +259,14 @@
     let lastTypingSent = 0;
 
     // ---- DOM ----
-    const app          = document.getElementById("app");
+    const authEl       = document.getElementById("auth");
+    const authUser     = document.getElementById("authUser");
+    const authPass     = document.getElementById("authPass");
+    const authError    = document.getElementById("authError");
+    const loginBtn     = document.getElementById("loginBtn");
+    const signupBtn    = document.getElementById("signupBtn");
+
+    const appEl        = document.getElementById("app");
     const contactsEl   = document.getElementById("contacts");
     const messagesEl   = document.getElementById("messages");
     const placeholder  = document.getElementById("placeholder");
@@ -326,6 +280,8 @@
     const inviteBox    = document.getElementById("inviteBox");
     const inviteLinkEl = document.getElementById("inviteLink");
     const copyInvite   = document.getElementById("copyInvite");
+    const logoutBtn    = document.getElementById("logoutBtn");
+    const myNameEl     = document.getElementById("myName");
     const toastEl      = document.getElementById("toast");
 
     // ---- Helpers ----
@@ -340,18 +296,68 @@
              d.getMinutes().toString().padStart(2, "0");
     }
     function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
-
     function toast(msg) {
-      toastEl.textContent = msg;
-      toastEl.classList.add("show");
+      toastEl.textContent = msg; toastEl.classList.add("show");
       setTimeout(() => toastEl.classList.remove("show"), 2000);
     }
 
-    // ---- Contacts list dikhao ----
+    // ================== AUTH ==================
+    // auto-login (saved token)
+    const savedUser  = localStorage.getItem("chat_username");
+    const savedToken = localStorage.getItem("chat_token");
+    if (savedUser && savedToken) {
+      authUser.value = savedUser;
+      socket.emit("auth token", { username: savedUser, token: savedToken });
+    }
+
+    function doLogin()  {
+      const u = authUser.value.trim(), p = authPass.value;
+      if (!u || !p) { authError.textContent = "Naam aur password likhein."; return; }
+      authError.textContent = "";
+      socket.emit("login", { username: u, password: p });
+    }
+    function doSignup() {
+      const u = authUser.value.trim(), p = authPass.value;
+      if (!u || !p) { authError.textContent = "Naam aur password likhein."; return; }
+      authError.textContent = "";
+      socket.emit("signup", { username: u, password: p });
+    }
+    loginBtn.addEventListener("click", doLogin);
+    signupBtn.addEventListener("click", doSignup);
+    authPass.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+
+    socket.on("auth error", (msg) => { authError.textContent = msg; });
+    socket.on("auth required", () => {
+      // saved token invalid -> login screen dikhao
+      localStorage.removeItem("chat_token");
+      authEl.style.display = "flex";
+    });
+    socket.on("auth ok", ({ username, token }) => {
+      me = username; myToken = token;
+      localStorage.setItem("chat_username", username);
+      localStorage.setItem("chat_token", token);
+      myNameEl.textContent = me;
+
+      authEl.style.display = "none";
+      appEl.style.display = "flex";
+      authPass.value = "";
+
+      if (inviteParam) {
+        socket.emit("use invite", inviteParam);
+        history.replaceState({}, "", location.pathname);
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      socket.emit("logout", myToken);
+      localStorage.removeItem("chat_token");
+      location.reload();
+    });
+
+    // ================== CHAT UI ==================
     function renderContacts() {
       contactsEl.innerHTML = "";
       const others = lastList.filter(u => u.username !== me);
-
       if (others.length === 0) {
         contactsEl.innerHTML =
           '<div class="empty-contacts">Abhi koi contact nahi.<br><br>' +
@@ -359,45 +365,34 @@
           'Jab wo link kholega, aap dono ek doosre ke contact ban jayenge.</div>';
         return;
       }
-
       others.forEach(u => {
         userInfo[u.username] = u;
         const item = document.createElement("div");
         item.className = "contact" + (u.username === currentChat ? " active" : "");
         item.onclick = () => openChat(u.username);
-
         const count = unread[u.username] || 0;
         const badge = count ? `<span class="badge">${count}</span>` : "";
-
         item.innerHTML =
           `<div class="avatar">${escapeHtml(u.username.charAt(0).toUpperCase())}</div>
            <div class="c-meta">
              <div class="c-name">${escapeHtml(u.username)}</div>
              <div class="c-status ${u.online ? "online" : ""}">${u.online ? "online" : "offline"}</div>
-           </div>
-           ${badge}`;
+           </div>${badge}`;
         contactsEl.appendChild(item);
       });
     }
 
-    // ---- Chat kholo ----
     function openChat(user) {
       currentChat = user;
       unread[user] = 0;
-
       chatName.textContent = user;
       chatStatus.textContent = (userInfo[user] && userInfo[user].online) ? "online" : "offline";
-
       messagesEl.innerHTML = "";
       messagesEl.style.display = "flex";
       placeholder.style.display = "none";
       typingDiv.style.display = "block";
       typingDiv.textContent = "";
-
-      inputEl.disabled = false;
-      sendBtn.disabled = false;
-      inputEl.focus();
-
+      inputEl.disabled = false; sendBtn.disabled = false; inputEl.focus();
       app.classList.add("show-chat");
       renderContacts();
       socket.emit("load conversation", user);
@@ -406,8 +401,7 @@
     function addMessage(data) {
       const div = document.createElement("div");
       div.className = "message" + (data.from === me ? " mine" : "");
-      div.innerHTML = escapeHtml(data.text) +
-                      `<span class="time">${formatTime(data.time)}</span>`;
+      div.innerHTML = escapeHtml(data.text) + `<span class="time">${formatTime(data.time)}</span>`;
       messagesEl.appendChild(div);
     }
 
@@ -418,56 +412,30 @@
       inputEl.value = "";
     }
 
-    // ---- UI events ----
     sendBtn.addEventListener("click", sendMessage);
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); sendMessage(); }
-    });
+    inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } });
     inputEl.addEventListener("input", () => {
       if (!currentChat) return;
       const now = Date.now();
-      if (now - lastTypingSent > 600) {
-        socket.emit("typing", { to: currentChat });
-        lastTypingSent = now;
-      }
+      if (now - lastTypingSent > 600) { socket.emit("typing", { to: currentChat }); lastTypingSent = now; }
     });
     backBtn.addEventListener("click", () => app.classList.remove("show-chat"));
 
-    // naam badalna
-    document.getElementById("changeName").addEventListener("click", () => {
-      const newName = (prompt("Naya naam likhein:", me) || "").trim();
-      if (newName) { localStorage.setItem("chat_username", newName); location.reload(); }
-    });
-
-    // invite box toggle
     inviteBtn.addEventListener("click", () => inviteBox.classList.toggle("show"));
-
-    // invite link copy
     copyInvite.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(inviteLinkEl.value);
-      } catch (e) {
-        inviteLinkEl.select();
-        document.execCommand("copy");
-      }
+      try { await navigator.clipboard.writeText(inviteLinkEl.value); }
+      catch (e) { inviteLinkEl.select(); document.execCommand("copy"); }
       toast("Invite link copy ho gaya!");
     });
 
     // ================== SERVER EVENTS ==================
-
-    // Apna invite code -> share link banao
     socket.on("your invite", (d) => {
       myInviteCode = d.inviteCode;
       inviteLinkEl.value = location.origin + "/?invite=" + myInviteCode;
     });
 
-    // Invite se naya contact ban gaya -> seedha us se chat kholo
-    socket.on("invite done", (d) => {
-      toast(d.withUser + " ab aapka contact hai");
-      openChat(d.withUser);
-    });
+    socket.on("invite done", (d) => { toast(d.withUser + " ab aapka contact hai"); openChat(d.withUser); });
 
-    // Contacts list (sirf apne contacts)
     socket.on("user list", (list) => {
       lastList = list;
       if (currentChat) {
@@ -477,7 +445,6 @@
       renderContacts();
     });
 
-    // Purani baat-cheet
     socket.on("conversation", (payload) => {
       if (payload.withUser !== currentChat) return;
       messagesEl.innerHTML = "";
@@ -485,20 +452,12 @@
       scrollBottom();
     });
 
-    // Naya private message
     socket.on("private message", (data) => {
       const other = (data.from === me) ? data.to : data.from;
-      if (other === currentChat) {
-        typingDiv.textContent = "";
-        addMessage(data);
-        scrollBottom();
-      } else {
-        unread[other] = (unread[other] || 0) + 1;
-        renderContacts();
-      }
+      if (other === currentChat) { typingDiv.textContent = ""; addMessage(data); scrollBottom(); }
+      else { unread[other] = (unread[other] || 0) + 1; renderContacts(); }
     });
 
-    // Typing indicator
     let typingTimeout;
     socket.on("typing", (data) => {
       if (data.from !== currentChat) return;
