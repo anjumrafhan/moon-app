@@ -109,27 +109,20 @@ io.on("connection", (socket) => {
       if (password.length < 4)
         return socket.emit("auth error", "Password kam se kam 4 characters ka ho.");
 
-      let user = await User.findOne({ username });
-      if (user && user.passwordHash)
-        return socket.emit("auth error", "Ye naam pehle se registered hai. Login karein.");
+      // SAKHT: agar ye naam kisi bhi soorat mein mojood hai (chahe password ho ya na ho)
+      // to signup allow NAHI — koi doosre ka account claim nahi kar sakta.
+      const existing = await User.findOne({ username });
+      if (existing)
+        return socket.emit("auth error", "Ye naam pehle se mojood hai. Doosra naam chunein ya Login karein.");
 
       const token = makeToken();
-      if (user && !user.passwordHash) {
-        // purana (passwordless) account claim karo
-        user.passwordHash = hashPassword(password);
-        if (!user.inviteCode) user.inviteCode = makeCode();
-        user.tokens = user.tokens || [];
-        user.tokens.push(token);
-        await user.save();
-      } else {
-        user = await User.create({
-          username,
-          passwordHash: hashPassword(password),
-          inviteCode: makeCode(),
-          contacts: [],
-          tokens: [token],
-        });
-      }
+      const user = await User.create({
+        username,
+        passwordHash: hashPassword(password),
+        inviteCode: makeCode(),
+        contacts: [],
+        tokens: [token],
+      });
       await finishLogin(socket, user, token);
     } catch (e) {
       console.log("signup error:", e.message);
