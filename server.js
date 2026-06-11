@@ -2,7 +2,6 @@
 //  server.js  —  PRIVATE 1-to-1 chat (WhatsApp jaisa DM)
 //  Node.js + Express + Socket.IO + MongoDB
 // ====================================================
-
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -57,6 +56,7 @@ io.on("connection", (socket) => {
   socket.on("register", async (username) => {
     socket.username = username;
     onlineUsers[username] = socket.id;
+
     // User ko database mein add karo (agar pehle se nahi hai)
     await User.updateOne({ username }, { username }, { upsert: true });
     await sendUserList();
@@ -92,6 +92,15 @@ io.on("connection", (socket) => {
 
     // Khud ko bhi bhejo, taake apni screen par foran dikhe
     socket.emit("private message", payload);
+  });
+
+  // --- 3.5) Typing indicator (sirf us bande ko jise message ja raha hai) ---
+  socket.on("typing", (data) => {
+    // data = { to }
+    const from = socket.username;
+    if (!from) return;
+    const toSocketId = onlineUsers[data.to];
+    if (toSocketId) io.to(toSocketId).emit("typing", { from });
   });
 
   // --- 4) Disconnect: online list se hatao ---
