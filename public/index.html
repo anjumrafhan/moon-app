@@ -19,6 +19,7 @@
     body {
       background: #d9dbd4;
       height: 100vh;
+      height: 100dvh;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -174,7 +175,7 @@
 
     @media (max-width: 600px) {
       body { align-items: stretch; justify-content: stretch; }
-      .app { width: 100%; height: 100vh; max-height: none; border-radius: 0; }
+      .app { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; }
       .sidebar { width: 100%; }
       .chat { display: none; }
       .app.show-chat .sidebar { display: none; }
