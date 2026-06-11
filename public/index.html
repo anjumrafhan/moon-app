@@ -180,6 +180,15 @@
       margin-top: 3px;
     }
 
+    /* typing... line */
+    .typing {
+      font-size: 12px;
+      color: #888;
+      padding: 0 15px 5px;
+      height: 18px;
+      background: #efeae2;
+    }
+
     .placeholder {
       flex: 1;
       display: flex;
@@ -258,6 +267,9 @@
       <!-- messages (chat khulne par dikhega) -->
       <div class="messages" id="messages" style="display:none;"></div>
 
+      <!-- typing... (chat khulne par dikhega) -->
+      <div class="typing" id="typing" style="display:none;"></div>
+
       <div class="input-area">
         <input id="input" type="text" placeholder="Message likhein..." autocomplete="off" disabled />
         <button id="send" disabled>Send</button>
@@ -279,12 +291,14 @@
     let lastList = [];          // server se aayi taaza user list
     const unread = {};          // username -> kitne unread messages
     const userInfo = {};        // username -> { online }
+    let lastTypingSent = 0;     // typing event throttle ke liye
 
     // ---- DOM ----
     const app          = document.getElementById("app");
     const contactsEl   = document.getElementById("contacts");
     const messagesEl   = document.getElementById("messages");
     const placeholder  = document.getElementById("placeholder");
+    const typingDiv    = document.getElementById("typing");
     const inputEl      = document.getElementById("input");
     const sendBtn      = document.getElementById("send");
     const chatName     = document.getElementById("chatName");
@@ -352,6 +366,8 @@
       messagesEl.innerHTML = "";
       messagesEl.style.display = "flex";
       placeholder.style.display = "none";
+      typingDiv.style.display = "block";
+      typingDiv.textContent = "";
 
       inputEl.disabled = false;
       sendBtn.disabled = false;
@@ -382,9 +398,22 @@
     }
 
     sendBtn.addEventListener("click", sendMessage);
-    inputEl.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendMessage();
+
+    // Enter se bhejo
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); sendMessage(); }
     });
+
+    // Likhte waqt doosre bande ko "typing" batao (har 600ms mein zyada se zyada ek baar)
+    inputEl.addEventListener("input", () => {
+      if (!currentChat) return;
+      const now = Date.now();
+      if (now - lastTypingSent > 600) {
+        socket.emit("typing", { to: currentChat });
+        lastTypingSent = now;
+      }
+    });
+
     backBtn.addEventListener("click", () => app.classList.remove("show-chat"));
 
     // ================== SERVER SE AANE WALE EVENTS ==================
@@ -414,6 +443,7 @@
       const other = (data.from === me) ? data.to : data.from;
 
       if (other === currentChat) {
+        typingDiv.textContent = "";   // message aa gaya to typing hatao
         addMessage(data);
         scrollBottom();
       } else {
@@ -421,6 +451,15 @@
         unread[other] = (unread[other] || 0) + 1;
         renderContacts();
       }
+    });
+
+    // 4) Typing indicator (sirf khuli chat wale ka dikhao)
+    let typingTimeout;
+    socket.on("typing", (data) => {
+      if (data.from !== currentChat) return;
+      typingDiv.textContent = data.from + " type kar raha hai...";
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => { typingDiv.textContent = ""; }, 1500);
     });
   </script>
 </body>
