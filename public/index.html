@@ -151,6 +151,14 @@
     }
     .message.mine { align-self: flex-end; background: #dcf8c6; }
     .message .time { font-size: 10px; color: #999; display: block; text-align: right; margin-top: 3px; }
+    .message .msg-img {
+      max-width: 220px; max-height: 280px; border-radius: 6px; display: block; cursor: pointer;
+    }
+    .message .msg-file {
+      display: inline-block; color: #075e54; text-decoration: none; font-size: 14px;
+      background: rgba(0,0,0,.06); padding: 9px 12px; border-radius: 6px;
+    }
+    .message .msg-text { margin-top: 4px; }
 
     .typing { font-size: 12px; color: #888; padding: 0 15px 5px; height: 18px; background: #efeae2; }
     .placeholder {
@@ -158,6 +166,11 @@
       color: #888; text-align: center; padding: 20px; background: #efeae2;
     }
     .input-area { display: flex; padding: 10px; background: #f0f0f0; gap: 8px; }
+    .input-area .attach-btn {
+      background: #e4e4e4; color: #075e54; border: none; padding: 10px 12px;
+      border-radius: 20px; cursor: pointer; font-size: 16px; line-height: 1;
+    }
+    .input-area .attach-btn:disabled { opacity: .5; cursor: not-allowed; }
     .input-area input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
     .input-area input:disabled { background: #e9e9e9; }
     .input-area button {
@@ -233,6 +246,8 @@
       <div class="messages" id="messages" style="display:none;"></div>
       <div class="typing" id="typing" style="display:none;"></div>
       <div class="input-area">
+        <button id="attachBtn" class="attach-btn" title="Photo / file bhejein" disabled>📎</button>
+        <input id="fileInput" type="file" accept="image/*,application/pdf" style="display:none;" />
         <input id="input" type="text" placeholder="Message likhein..." autocomplete="off" disabled />
         <button id="send" disabled>Send</button>
       </div>
@@ -274,6 +289,8 @@
     const typingDiv    = document.getElementById("typing");
     const inputEl      = document.getElementById("input");
     const sendBtn      = document.getElementById("send");
+    const attachBtn    = document.getElementById("attachBtn");
+    const fileInput    = document.getElementById("fileInput");
     const chatName     = document.getElementById("chatName");
     const chatStatus   = document.getElementById("chatStatus");
     const backBtn      = document.getElementById("back");
@@ -393,7 +410,7 @@
       placeholder.style.display = "none";
       typingDiv.style.display = "block";
       typingDiv.textContent = "";
-      inputEl.disabled = false; sendBtn.disabled = false; inputEl.focus();
+      inputEl.disabled = false; sendBtn.disabled = false; attachBtn.disabled = false; inputEl.focus();
       app.classList.add("show-chat");
       renderContacts();
       socket.emit("load conversation", user);
@@ -402,16 +419,90 @@
     function addMessage(data) {
       const div = document.createElement("div");
       div.className = "message" + (data.from === me ? " mine" : "");
-      div.innerHTML = escapeHtml(data.text) + `<span class="time">${formatTime(data.time)}</span>`;
+
+      if (data.type === "image" && data.media) {
+        const img = document.createElement("img");
+        img.className = "msg-img";
+        img.src = data.media;
+        img.onclick = () => window.open(data.media, "_blank");
+        div.appendChild(img);
+      } else if (data.type === "file" && data.media) {
+        const a = document.createElement("a");
+        a.className = "msg-file";
+        a.href = data.media;
+        a.download = data.fileName || "file";
+        a.textContent = "📎 " + (data.fileName || "file");
+        div.appendChild(a);
+      }
+      if (data.text) {
+        const t = document.createElement("div");
+        t.className = "msg-text";
+        t.textContent = data.text;
+        div.appendChild(t);
+      }
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = formatTime(data.time);
+      div.appendChild(time);
+
       messagesEl.appendChild(div);
     }
 
     function sendMessage() {
       const text = inputEl.value.trim();
       if (text === "" || !currentChat) return;
-      socket.emit("private message", { to: currentChat, text: text });
+      socket.emit("private message", { to: currentChat, type: "text", text: text });
       inputEl.value = "";
     }
+
+    // ---- Image ko chhota (compress) karo, base64 wapas do ----
+    function compressImage(file, maxDim, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+            else if (height >= width && height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+            const canvas = document.createElement("canvas");
+            canvas.width = width; canvas.height = height;
+            canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    function readAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ---- Attach (photo/file) ----
+    attachBtn.addEventListener("click", () => { if (currentChat) fileInput.click(); });
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file || !currentChat) { fileInput.value = ""; return; }
+      try {
+        if (file.type.startsWith("image/")) {
+          const media = await compressImage(file, 1000, 0.7); // max 1000px, 70% quality
+          socket.emit("private message", { to: currentChat, type: "image", media: media, text: "" });
+        } else {
+          if (file.size > 4 * 1024 * 1024) { toast("File 4MB se chhoti honi chahiye"); fileInput.value = ""; return; }
+          const media = await readAsDataURL(file);
+          socket.emit("private message", { to: currentChat, type: "file", media: media, fileName: file.name, text: "" });
+        }
+      } catch (e) { toast("File bhejne mein masla hua"); }
+      fileInput.value = "";
+    });
 
     sendBtn.addEventListener("click", sendMessage);
     inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } });
