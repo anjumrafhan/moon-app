@@ -106,6 +106,31 @@
       border-radius: 6px; cursor: pointer; font-size: 12px;
     }
 
+    /* settings panel */
+    .settings-box {
+      display: none; flex-direction: column; gap: 8px;
+      padding: 12px; background: #f6f6f6; border-bottom: 1px solid #e2e2e2;
+    }
+    .settings-box.show { display: flex; }
+    .set-row { display: flex; align-items: center; gap: 12px; }
+    .set-divider { height: 1px; background: #e2e2e2; margin: 4px 0; }
+    .set-title { font-size: 13px; font-weight: bold; color: #075e54; }
+    .settings-box input {
+      padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none;
+    }
+    .set-btn {
+      background: #075e54; color: #fff; border: none; padding: 9px 12px;
+      border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    .set-link {
+      background: none; border: none; color: #c0392b; cursor: pointer;
+      font-size: 12px; margin-left: 6px;
+    }
+    .set-msg { font-size: 12px; min-height: 14px; }
+    .set-msg.ok { color: #1e8e3e; }
+    .set-msg.err { color: #c0392b; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
     .contacts { flex: 1; overflow-y: auto; }
     .contact {
       display: flex; align-items: center; gap: 12px; padding: 12px 14px;
@@ -218,7 +243,10 @@
       <div class="sidebar-header">
         <div class="sh-top">
           <span>Chats</span>
-          <button id="inviteBtn" class="invite-btn">+ Invite</button>
+          <div>
+            <button id="settingsBtn" class="invite-btn" title="Settings">⚙️</button>
+            <button id="inviteBtn" class="invite-btn">+ Invite</button>
+          </div>
         </div>
         <small id="myName">—</small>
         <button id="logoutBtn" class="logout-btn">Logout</button>
@@ -227,6 +255,24 @@
       <div class="invite-box" id="inviteBox">
         <input id="inviteLink" readonly value="..." />
         <button id="copyInvite">Copy</button>
+      </div>
+
+      <!-- Settings panel -->
+      <div class="settings-box" id="settingsBox">
+        <div class="set-row set-profile">
+          <div class="avatar" id="myAvatar">—</div>
+          <div>
+            <button id="changePicBtn" class="set-btn">Profile pic badlein</button>
+            <button id="removePicBtn" class="set-link">Hatayein</button>
+          </div>
+          <input id="avatarInput" type="file" accept="image/*" style="display:none;" />
+        </div>
+        <div class="set-divider"></div>
+        <div class="set-title">Password badlein</div>
+        <input id="oldPass" type="password" placeholder="Mojooda password" />
+        <input id="newPass" type="password" placeholder="Naya password" />
+        <div class="set-msg" id="passMsg"></div>
+        <button id="savePassBtn" class="set-btn">Password update karein</button>
       </div>
 
       <div class="contacts" id="contacts"></div>
@@ -273,6 +319,7 @@
     const unread = {};
     const userInfo = {};
     let lastTypingSent = 0;
+    let myAvatar = "";
 
     // ---- DOM ----
     const authEl       = document.getElementById("auth");
@@ -301,6 +348,16 @@
     const logoutBtn    = document.getElementById("logoutBtn");
     const myNameEl     = document.getElementById("myName");
     const toastEl      = document.getElementById("toast");
+    const settingsBtn  = document.getElementById("settingsBtn");
+    const settingsBox  = document.getElementById("settingsBox");
+    const myAvatarEl   = document.getElementById("myAvatar");
+    const changePicBtn = document.getElementById("changePicBtn");
+    const removePicBtn = document.getElementById("removePicBtn");
+    const avatarInput  = document.getElementById("avatarInput");
+    const oldPass      = document.getElementById("oldPass");
+    const newPass      = document.getElementById("newPass");
+    const passMsg      = document.getElementById("passMsg");
+    const savePassBtn  = document.getElementById("savePassBtn");
 
     // ---- Helpers ----
     function escapeHtml(s) {
@@ -431,8 +488,11 @@
         item.onclick = () => openChat(u.username);
         const count = unread[u.username] || 0;
         const badge = count ? `<span class="badge">${count}</span>` : "";
+        const avatarInner = u.avatar
+          ? `<img src="${u.avatar}" alt="">`
+          : escapeHtml(u.username.charAt(0).toUpperCase());
         item.innerHTML =
-          `<div class="avatar">${escapeHtml(u.username.charAt(0).toUpperCase())}</div>
+          `<div class="avatar">${avatarInner}</div>
            <div class="c-meta">
              <div class="c-name">${escapeHtml(u.username)}</div>
              <div class="c-status ${u.online ? "online" : ""}">${u.online ? "online" : "offline"}</div>
@@ -554,17 +614,55 @@
     });
     backBtn.addEventListener("click", () => app.classList.remove("show-chat"));
 
-    inviteBtn.addEventListener("click", () => inviteBox.classList.toggle("show"));
+    inviteBtn.addEventListener("click", () => { inviteBox.classList.toggle("show"); settingsBox.classList.remove("show"); });
     copyInvite.addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(inviteLinkEl.value); }
       catch (e) { inviteLinkEl.select(); document.execCommand("copy"); }
       toast("Invite link copy ho gaya!");
     });
 
+    // ---- Settings panel ----
+    settingsBtn.addEventListener("click", () => { settingsBox.classList.toggle("show"); inviteBox.classList.remove("show"); });
+
+    function setMyAvatar(av) {
+      myAvatar = av || "";
+      myAvatarEl.innerHTML = myAvatar
+        ? `<img src="${myAvatar}" alt="">`
+        : (me ? escapeHtml(me.charAt(0).toUpperCase()) : "—");
+    }
+
+    changePicBtn.addEventListener("click", () => avatarInput.click());
+    avatarInput.addEventListener("change", async () => {
+      const file = avatarInput.files[0];
+      if (!file) return;
+      try {
+        const media = await compressImage(file, 256, 0.7); // chhoti avatar
+        socket.emit("set avatar", media);
+        toast("Profile pic update ho rahi hai...");
+      } catch (e) { toast("Pic set karne mein masla"); }
+      avatarInput.value = "";
+    });
+    removePicBtn.addEventListener("click", () => { socket.emit("set avatar", ""); toast("Profile pic hata di"); });
+
+    savePassBtn.addEventListener("click", () => {
+      const oldP = oldPass.value, newP = newPass.value;
+      if (!oldP || !newP) { passMsg.className = "set-msg err"; passMsg.textContent = "Dono fields bharein."; return; }
+      passMsg.className = "set-msg"; passMsg.textContent = "...";
+      socket.emit("change password", { oldPassword: oldP, newPassword: newP });
+    });
+
     // ================== SERVER EVENTS ==================
     socket.on("your invite", (d) => {
       myInviteCode = d.inviteCode;
       inviteLinkEl.value = location.origin + "/?invite=" + myInviteCode;
+    });
+
+    socket.on("your profile", (d) => { setMyAvatar(d.avatar || ""); });
+
+    socket.on("password result", (d) => {
+      passMsg.className = "set-msg " + (d.ok ? "ok" : "err");
+      passMsg.textContent = d.msg;
+      if (d.ok) { oldPass.value = ""; newPass.value = ""; }
     });
 
     socket.on("invite done", (d) => { toast(d.withUser + " ab aapka contact hai"); openChat(d.withUser); });
