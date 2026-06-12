@@ -16,6 +16,8 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
 
+    html, body { overflow-x: hidden; max-width: 100%; }
+
     body {
       background: #d9dbd4;
       height: 100vh;
@@ -213,7 +215,7 @@
 
     @media (max-width: 600px) {
       body { align-items: stretch; justify-content: stretch; }
-      .app { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; }
+      .app { width: 100%; max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; }
       .sidebar { width: 100%; }
       .chat { display: none; }
       .app.show-chat .sidebar { display: none; }
