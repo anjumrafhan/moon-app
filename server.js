@@ -7,6 +7,9 @@
 //  - Login ke baad ek token milta hai, taake refresh par
 //    dobara password na likhna paray.
 //  - Sirf invite-link se juday hue contacts se baat ho sakti hai.
+//
+//  NAYA:  POST /api/notify  -> reception/website se staff ko
+//         seedha message (broadcast ya kisi aik surgeon ko).
 // ====================================================
 const express = require("express");
 const http = require("http");
@@ -19,6 +22,16 @@ const app = express();
 const server = http.createServer(app);
 // maxHttpBufferSize barhaya taake image/file (base64) bhej sakein (~6MB)
 const io = new Server(server, { maxHttpBufferSize: 6e6 });
+
+// ---- JSON body + CORS (website/reception se POST ke liye) ----
+app.use(express.json({ limit: "2mb" }));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -106,6 +119,86 @@ async function finishLogin(socket, user, token) {
   socket.emit("your profile", { avatar: user.avatar || "" });
   await refreshAround(user.username);
 }
+
+// ====================================================
+//  NOTIFY API  —  reception/website se staff ko message
+// ====================================================
+const SYSTEM_USER = process.env.NOTIFY_FROM || "Reception";        // bhejne wala naam (chat mein yahi dikhega)
+const NOTIFY_KEY  = process.env.NOTIFY_KEY  || "htth-moon-2026";   // secret key (reception bhi yahi bheje)
+
+// "Reception" naam ka system user maujood karo (sirf message bhejne ke liye)
+async function ensureSystemUser() {
+  let u = await User.findOne({ username: SYSTEM_USER });
+  if (!u) {
+    u = await User.create({
+      username: SYSTEM_USER,
+      passwordHash: hashPassword(crypto.randomBytes(12).toString("hex")), // koi login na kar sake
+      inviteCode: makeCode(),
+      contacts: [],
+    });
+  }
+  return u;
+}
+
+// Ek message kisi user ko pohanchao (save + real-time + contact list mein dikhao)
+async function deliverMessage(from, to, text) {
+  // dono taraf contact bana do taake "Reception" us ki chat list mein nazar aaye
+  await User.updateOne({ username: from }, { $addToSet: { contacts: to } });
+  await User.updateOne({ username: to }, { $addToSet: { contacts: from } });
+  const saved = await new Message({ from, to, type: "text", text }).save();
+  const payload = {
+    from, to, type: "text", text: saved.text,
+    media: "", fileName: "", time: saved.time,
+  };
+  const sid = onlineUsers[to];
+  if (sid) {
+    io.to(sid).emit("private message", payload); // real-time message
+    await pushContacts(to);                       // updated contact list (Reception dikhe)
+  }
+  return saved;
+}
+
+// Health check (browser mein khol kar test kar sakte hain)
+app.get("/api/ping", (req, res) => res.json({ ok: true, service: "moon-notify" }));
+
+// POST /api/notify
+// body: { key, text, to?: "username" | ["u1","u2"], broadcast?: true }
+// header bhi chal jata hai: x-api-key: <key>
+app.post("/api/notify", async (req, res) => {
+  try {
+    const key = req.headers["x-api-key"] || req.query.key || (req.body && req.body.key);
+    if (key !== NOTIFY_KEY) return res.status(401).json({ ok: false, error: "ghalat key" });
+
+    const text = ((req.body && req.body.text) || "").toString().trim();
+    if (!text) return res.status(400).json({ ok: false, error: "text khali hai" });
+
+    await ensureSystemUser();
+
+    // recipients tay karo
+    let recipients = [];
+    if (req.body.broadcast) {
+      const users = await User.find({ username: { $ne: SYSTEM_USER } }, "username");
+      recipients = users.map((u) => u.username);
+    } else if (req.body.to) {
+      recipients = Array.isArray(req.body.to) ? req.body.to : [req.body.to];
+    }
+    recipients = [...new Set(recipients.map((r) => (r || "").trim()).filter(Boolean))];
+    if (!recipients.length) return res.status(400).json({ ok: false, error: "koi recipient nahi (to ya broadcast dein)" });
+
+    let sent = 0;
+    const missing = [];
+    for (const r of recipients) {
+      const exists = await User.findOne({ username: r }, "username");
+      if (!exists) { missing.push(r); continue; }
+      await deliverMessage(SYSTEM_USER, r, text);
+      sent++;
+    }
+    res.json({ ok: true, sent, missing });
+  } catch (e) {
+    console.log("notify error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 io.on("connection", (socket) => {
   console.log("Naya connection:", socket.id);
